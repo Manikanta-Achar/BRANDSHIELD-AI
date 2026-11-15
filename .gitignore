@@ -26,3 +26,9 @@ Thumbs.db
 
 # Local uploads
 uploads/
+.local-tools/
+**/.qa/
+**/test-results/
+**/playwright-report/
+**/*.egg-info/
+.ruff_cache/

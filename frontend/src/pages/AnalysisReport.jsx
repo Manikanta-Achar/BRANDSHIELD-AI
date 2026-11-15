@@ -78,13 +78,13 @@ export default function AnalysisReport() {
     perform(
       "save",
       async () => {
-        await execute("revision.save", { id: s.id, content: editor });
+        await execute("revision.save", { id: s.id, content: editor, expectedVersionId: s.currentVersionId });
         await runAnalysis(s.id);
       },
       "New version saved and checked.",
     );
   const resolve = async (values) => {
-    await execute("finding.resolve", { id: s.id, ...values });
+    await execute("finding.resolve", { id: s.id, ...values, expectedVersionId: s.currentVersionId });
     toast.success(
       values.resolution === "Accepted" || values.resolution === "Edited"
         ? "Correction applied. Save & recheck your revision next."
@@ -95,7 +95,7 @@ export default function AnalysisReport() {
     perform(
       "review",
       async () => {
-        await execute("review.request", { id: s.id });
+        await execute("review.request", { id: s.id, expectedVersionId: s.currentVersionId });
         setConfirm(false);
       },
       "Sent to the human review queue.",
@@ -339,7 +339,8 @@ export default function AnalysisReport() {
               )}
             </dl>
           </section>
-          <CheckAvailability />
+          {s.warnings?.map((warning) => <Notice key={warning}>{warning}</Notice>)}
+          <CheckAvailability checks={s.checks} />
         </section>
         <section className="report-findings-panel">
           <div className="card analysis-summary">

@@ -147,13 +147,11 @@ export default function Navbar({ onMenu }) {
       <Modal
         open={help}
         onClose={() => setHelp(false)}
-        title="Your guide to the demo"
+        title={demo ? "Your guide to the demo" : "Your guide to BrandShield"}
       >
         <div className="modal-body">
           <p>
-            This is a browser-only demonstration with fictional TechNova data.
-            Role switching is a demo convenience; it is not secure
-            authentication.
+            {demo ? "This is a browser-only demonstration with fictional TechNova data. Role switching is a demo convenience." : "Your workspace stores approved knowledge, content versions, evidence and human decisions in the configured backend."}
           </p>
           <ol className="guide-list">
             <li>As Admin, update a rule in the knowledge base.</li>

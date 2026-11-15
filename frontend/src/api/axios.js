@@ -4,7 +4,7 @@ export const api = axios.create({
   timeout: 15000,
   headers: { "Content-Type": "application/json" },
 });
-// API tokens are session-only. Demo identities are never sent to the API.
+// API tokens are scoped to this browser tab. Demo identities never reach the API.
 export function setAccessToken(token) {
   if (token) api.defaults.headers.common.Authorization = `Bearer ${token}`;
   else delete api.defaults.headers.common.Authorization;
@@ -12,6 +12,8 @@ export function setAccessToken(token) {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.status === 401 && !error.config?.url?.startsWith("/auth/"))
+      window.dispatchEvent(new Event("brandshield:unauthorized"));
     const detail = error.response?.data?.detail;
     const validation = Array.isArray(detail)
       ? detail

@@ -21,9 +21,13 @@ export const authService = {
   login: (credentials) => body(api.post(paths.login, credentials)),
   register: (details) => body(api.post(paths.register, details)),
   me: () => body(api.get(paths.me)),
+  logout: () => body(api.post("/auth/logout")),
 };
 export const workspaceService = {
   list: () => body(api.get(paths.workspaces)),
+  create: (values) => body(api.post(paths.workspaces, values)),
+  member: (id, values) => body(api.put(`${paths.workspace(id)}/members`, values)),
+  removeMember: (id, userId) => body(api.delete(`${paths.workspace(id)}/members/${encodeURIComponent(userId)}`)),
   get: (id) => body(api.get(paths.workspace(id))),
   update: (id, values) => body(api.patch(paths.workspace(id), values)),
 };
@@ -41,9 +45,10 @@ export const submissionService = {
   create: (item) => body(api.post(paths.submissions, item)),
   revise: (id, values) =>
     body(api.post(`${paths.submission(id)}/versions`, values)),
-  upload: (file, onUploadProgress) => {
+  upload: (file, workspaceId, onUploadProgress) => {
     const form = new FormData();
     form.append("file", file);
+    form.append("workspace_id", workspaceId);
     return body(
       api.post(paths.uploads, form, {
         headers: { "Content-Type": undefined },
@@ -53,7 +58,7 @@ export const submissionService = {
   },
 };
 export const analysisService = {
-  start: (id) => body(api.post(`${paths.submission(id)}/analysis`)),
+  start: (id) => body(api.post(`${paths.submission(id)}/analysis`, null, { timeout: 90000 })),
   get: (id) => body(api.get(`${paths.submission(id)}/analysis`)),
 };
 export const findingService = {
@@ -68,7 +73,7 @@ export const findingService = {
 export const reviewService = {
   queue: (workspaceId) =>
     body(api.get(paths.reviews, { params: { workspace_id: workspaceId } })),
-  request: (id) => body(api.post(`${paths.submission(id)}/review`)),
+  request: (id, values) => body(api.post(`${paths.submission(id)}/review`, values)),
   comment: (id, comment) =>
     body(api.post(`${paths.review(id)}/comments`, { comment })),
   decide: (id, decision) =>
@@ -82,8 +87,8 @@ export const auditService = {
     body(api.get(paths.audit, { params: { workspace_id: workspaceId } })),
 };
 export const dashboardService = {
-  stats: (workspaceId) =>
-    body(api.get(paths.dashboard, { params: { workspace_id: workspaceId } })),
+  stats: (workspaceId, days) =>
+    body(api.get(paths.dashboard, { params: { workspace_id: workspaceId, days } })),
 };
 export const profileService = {
   update: (values) => body(api.patch(paths.profile, values)),
@@ -94,23 +99,32 @@ export const profileService = {
 export function apiCommand(command, p) {
   switch (command) {
     case "submission.create":
-      return submissionService.create(p);
+      return submissionService.create({ workspaceId: p.workspaceId, title: p.title, channel: p.channel,
+        contentType: p.contentType, content: p.content, ...(p.uploadId ? { uploadId: p.uploadId } : {}) });
     case "analysis.start":
       return analysisService.start(p.id);
     case "finding.resolve":
-      return findingService.resolve(p.id, p.findingId, p);
+      return findingService.resolve(p.id, p.findingId, { resolution: p.resolution, correction: p.correction || "",
+        reason: p.reason || "", expectedVersionId: p.expectedVersionId });
     case "revision.save":
-      return submissionService.revise(p.id, p);
+      return submissionService.revise(p.id, { content: p.content, expectedVersionId: p.expectedVersionId });
     case "review.request":
-      return reviewService.request(p.id);
+      return reviewService.request(p.id, { expectedVersionId: p.expectedVersionId });
     case "review.comment":
       return reviewService.comment(p.id, p.comment);
     case "review.decide":
-      return reviewService.decide(p.id, p);
+      return reviewService.decide(p.id, { decision: p.decision, comment: p.comment, acknowledged: p.acknowledged,
+        expectedVersionId: p.expectedVersionId, reviewRequestId: p.reviewRequestId });
     case "knowledge.save":
-      return p.item.id
-        ? knowledgeService.update(p.item.id, p.item)
-        : knowledgeService.create({ ...p.item, workspaceId: p.workspaceId });
+      {
+        const fields = ["type", "title", "content", "source", "owner", "version", "effective", "status", "rule",
+          "replacement", "trigger", "subject", "aliases", "unit", "approvedValue", "channels"];
+        const values = Object.fromEntries(fields.filter((key) => p.item[key] !== undefined).map((key) => [key, p.item[key]]));
+        values.workspaceId = p.workspaceId;
+        return p.item.id
+          ? knowledgeService.update(p.item.id, { ...values, expectedRevision: p.item.revision })
+          : knowledgeService.create(values);
+      }
     case "knowledge.archive":
       return knowledgeService.archive(p.itemId);
     case "workspace.update":
@@ -119,6 +133,10 @@ export function apiCommand(command, p) {
         description: p.description,
         consent: p.consent,
       });
+    case "workspace.create":
+      return workspaceService.create({ name: p.name, description: p.description || "" });
+    case "workspace.member":
+      return workspaceService.member(p.workspaceId, { email: p.email, role: p.role });
     case "preferences.update":
       return profileService.preferences({
         showActivity: p.showActivity,

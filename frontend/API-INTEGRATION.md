@@ -1,6 +1,8 @@
-# Proposed FastAPI integration contract
+# Frontend API contract and integration notes
 
-This frontend is ready for a separately implemented service, not a completed backend integration. Default base URL: `http://localhost:8000/api/v1`. Axios is configured in `src/api/axios.js`; all paths and service functions live in `src/api/endpoints.js`. Demo commands and API commands are selected centrally by `DataContext`.
+The FastAPI implementation now lives in `../backend/` and API mode is the default. The original object examples below are retained for design context; the [implemented API inventory](../docs/api-reference.md) and running `/docs` are authoritative. Default base URL: `http://localhost:8000/api/v1`. Axios and services remain in `src/api/`. Demo and API commands remain isolated in `DataContext`.
+
+Integration changes: uploads require multipart `workspace_id`; server IDs are MongoDB IDs; finding actions, revisions and review requests include `expectedVersionId`; decisions also include `reviewRequestId`; knowledge updates include `expectedRevision`. The adapter strips UI-only fields before API calls. Workspace creation/membership and logout endpoints are implemented. Dashboard statistics now come from `/dashboard`. Browser-tab session storage restores JWTs on refresh and `/auth/me` validates them. Sign-out revokes existing account sessions. There are no refresh tokens.
 
 JSON bodies and returned objects use **camelCase** as below. The workspace filter query parameter is `workspace_id`. Return arrays directly for list operations. IDs are strings; dates/timestamps are ISO 8601. API tokens use `Authorization: Bearer <access_token>`. Enable CORS only for your actual frontend origins, including http://127.0.0.1:5173 in development.
 
@@ -25,7 +27,7 @@ JSON bodies and returned objects use **camelCase** as below. The workspace filte
 }
 ```
 
-The server assigns roles: `Admin`, `Content Creator`, `Reviewer`, `Agency Partner`. Registration must not trust a client-specified privileged role. Demo role selection is absent in API Mode. Tokens are memory-only and cleared on sign-out or page refresh. The current contract does not implement refresh tokens or an authenticated browser session.
+The server assigns roles: `Admin`, `Content Creator`, `Reviewer`, `Agency Partner`. Registration rejects privileged role fields and creates a Content Creator. Demo role selection is absent in API Mode. The active workspace membership controls effective permissions. Tokens are scoped to browser-tab session storage, validated on refresh, and cleared/revoked on sign-out.
 
 ## Workspaces and knowledge
 
@@ -224,7 +226,7 @@ Severities: `High`, `Medium`, `Low`. Resolutions: `Open`, `Accepted`, `Edited`, 
 }
 ```
 
-The dashboard currently derives its statistics from the visible submissions snapshot for consistency and period filtering. Its standalone stats service is prepared for later server aggregation. The review queue similarly derives pending records from that same snapshot; standalone review/version services are provided for future pagination.
+In API mode, the dashboard reads persisted aggregation results from `/dashboard`, including period filters. Review queue and history use the permission-filtered persisted submission snapshot; dedicated review/version routes are also implemented for future pagination. Demo Mode continues to derive all results locally.
 
 ## Snapshot loading and failures
 

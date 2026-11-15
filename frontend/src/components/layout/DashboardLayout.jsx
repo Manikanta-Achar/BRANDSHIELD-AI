@@ -12,7 +12,7 @@ export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { loading, error, refresh } = useData();
-  const { demo } = useAuth();
+  const { demo, accountRole } = useAuth();
   const { workspace } = useWorkspace();
   const location = useLocation();
   return (
@@ -40,13 +40,13 @@ export default function DashboardLayout() {
                 Retry connection
               </Button>
             </EmptyState>
-          ) : !workspace ? (
+          ) : !workspace && !(accountRole === "Admin" && location.pathname === "/app/workspaces") ? (
             <EmptyState
               title="No assigned workspaces"
               description="Ask your administrator to assign you to a workspace."
-            />
+            >{accountRole === "Admin" && <Button to="/app/workspaces">Create workspace</Button>}</EmptyState>
           ) : (
-            <Outlet key={`${workspace.id}-${location.pathname}`} />
+            <Outlet key={`${workspace?.id || "new"}-${location.pathname}`} />
           )}
         </main>
         <footer className="app-footer">

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { dashboardService } from "../api/endpoints.js";
 import { Link } from "react-router-dom";
 import {
   BarChart,
@@ -35,6 +36,7 @@ import Button from "../components/common/Button.jsx";
 import {
   PageHeader,
   EmptyState,
+  Notice,
   formatDate,
 } from "../components/common/PageUI.jsx";
 import SubmissionsTable from "../features/submissions/SubmissionsTable.jsx";
@@ -51,6 +53,16 @@ export default function Dashboard() {
   const { user, demo } = useAuth();
   const { workspace, submissions, knowledge, audit } = useWorkspace();
   const [period, setPeriod] = useState("30");
+  const [serverStats, setServerStats] = useState(null);
+  const [statsError, setStatsError] = useState("");
+  useEffect(() => {
+    if (demo) return;
+    let active = true;
+    dashboardService.stats(workspace.id, period === "all" ? undefined : Number(period))
+      .then((value) => { if (active) { setServerStats(value); setStatsError(""); } })
+      .catch((error) => { if (active) { setServerStats(null); setStatsError(error.message); } });
+    return () => { active = false; };
+  }, [demo, workspace.id, period, submissions]);
   const cutoff = Date.now() - Number(period) * 86400000;
   const shown = submissions.filter(
     (s) => period === "all" || new Date(s.createdAt).getTime() >= cutoff,
@@ -70,35 +82,35 @@ export default function Dashboard() {
   const metrics = [
     {
       title: "Total submissions",
-      value: shown.length,
+      value: demo ? shown.length : serverStats?.totalSubmissions ?? "…",
       icon: Files,
       color: "teal",
       sub: "Across your visible content",
     },
     {
       title: "Pending reviews",
-      value: count("In Review"),
+      value: demo ? count("In Review") : serverStats?.pendingReviews ?? "…",
       icon: Clock3,
       color: "blue",
       sub: "Waiting for a human decision",
     },
     {
       title: "Approved",
-      value: count("Approved"),
+      value: demo ? count("Approved") : serverStats?.approvedSubmissions ?? "…",
       icon: CircleCheck,
       color: "green",
       sub: "Cleared by a reviewer",
     },
     {
       title: "Rejected",
-      value: count("Rejected"),
+      value: demo ? count("Rejected") : serverStats?.rejectedSubmissions ?? "…",
       icon: XCircle,
       color: "neutral",
       sub: "Ready for a fresh revision",
     },
     {
       title: "High-severity issues",
-      value: high,
+      value: demo ? high : serverStats?.highSeverityViolations ?? "…",
       icon: ShieldAlert,
       color: "amber",
       sub: "Open or disputed findings",
@@ -112,11 +124,11 @@ export default function Dashboard() {
     "Terminology",
   ].map((name) => ({
     name,
-    count: findings.filter((f) => f.category === name).length,
+    count: demo ? findings.filter((f) => f.category === name).length : serverStats?.byCategory.find((c) => c.name === name)?.count || 0,
   }));
   const statuses = STATES.map((name, i) => ({
     name,
-    value: count(name),
+    value: demo ? count(name) : serverStats?.byStatus.find((s) => s.name === name)?.value || 0,
     color: colors[i],
   })).filter((s) => s.value);
   const recent = [...shown]
@@ -131,6 +143,7 @@ export default function Dashboard() {
     .slice(0, 4);
   return (
     <>
+      {statsError && <Notice tone="danger">Dashboard statistics unavailable: {statsError}</Notice>}
       <PageHeader
         eyebrow={`YOUR ${workspace.name.toUpperCase()} WORKSPACE`}
         title="Your brand, at a glance."

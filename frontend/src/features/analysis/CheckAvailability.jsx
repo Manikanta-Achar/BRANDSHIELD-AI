@@ -1,5 +1,11 @@
 import { LockKeyhole } from "lucide-react";
-export default function CheckAvailability() {
+export default function CheckAvailability({ checks }) {
+  if (checks?.length) return (
+    <details className="check-availability">
+      <summary><LockKeyhole size={14} />Analysis check coverage <span>{checks.filter((c) => c.status !== "checked").length} limited or skipped</span></summary>
+      <div>{checks.map((c) => <div key={c.check}><span className="rule-tag">{c.check}</span><p><strong>{c.status.replaceAll("_", " ")}</strong><small>{c.reason || "Completed against available approved sources."}</small></p></div>)}</div>
+    </details>
+  );
   return (
     <details className="check-availability">
       <summary>

@@ -54,6 +54,7 @@ export default function ReviewDetails() {
     s.ownerId !== user.id &&
     ["Admin", "Reviewer"].includes(user.role);
   const high = s.findings.filter((f) => f.severity === "High");
+  const needsAttention = high.length > 0 || s.findings.some((f) => f.resolution === "Challenged" || f.evidenceStatus === "Unverified");
   const addComment = async (e) => {
     e.preventDefault();
     setBusy(true);
@@ -83,6 +84,8 @@ export default function ReviewDetails() {
         decision,
         comment: decisionComment,
         acknowledged,
+        expectedVersionId: s.currentVersionId,
+        reviewRequestId: s.reviewRequestId,
       });
       toast.success(
         decision === "Approved"
@@ -222,7 +225,8 @@ export default function ReviewDetails() {
               ))}
             </details>
           )}
-          <CheckAvailability />
+          {s.warnings?.map((warning) => <Notice key={warning}>{warning}</Notice>)}
+          <CheckAvailability checks={s.checks} />
           <section className="card review-comments">
             <div className="card-heading">
               <div>
@@ -310,11 +314,9 @@ export default function ReviewDetails() {
                 </dd>
               </div>
             </dl>
-            {high.length > 0 && (
+            {needsAttention && (
               <Notice tone="warning">
-                {high.length} high-severity{" "}
-                {high.length === 1 ? "finding requires" : "findings require"}{" "}
-                explicit acknowledgement before any decision.
+                High-severity, challenged and uncertain findings require explicit acknowledgement before any decision.
               </Notice>
             )}
             {canDecide ? (
@@ -391,7 +393,7 @@ export default function ReviewDetails() {
               onChange={(e) => setDecisionComment(e.target.value)}
             />
           </label>
-          {high.length > 0 && (
+          {needsAttention && (
             <label className="acknowledgement">
               <input
                 type="checkbox"
@@ -401,8 +403,7 @@ export default function ReviewDetails() {
               />
               <ShieldAlert size={18} />
               <span>
-                I have examined all {high.length} high-severity findings, their
-                evidence and the creator’s responses.
+                I have examined high-severity, challenged and uncertain findings, their evidence and the creator’s responses.
               </span>
             </label>
           )}

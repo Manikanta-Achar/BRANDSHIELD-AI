@@ -17,18 +17,28 @@ import Button from "../components/common/Button.jsx";
 import Modal from "../components/common/Modal.jsx";
 export default function Workspaces() {
   const { workspace, workspaces, selectWorkspace } = useWorkspace();
-  const { user, demo } = useAuth();
+  const { user, demo, accountRole } = useAuth();
   const { data, execute } = useData();
   const [members, setMembers] = useState(null);
   const [draft, setDraft] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberRole, setMemberRole] = useState("Content Creator");
+  const manageMembers = !demo && members?.members.some((m) => m.id === user.id && m.role === "Admin");
+  const assignMember = async (e) => {
+    e.preventDefault(); setBusy(true); setError("");
+    try {
+      const updated = await execute("workspace.member", { workspaceId: members.id, email: memberEmail, role: memberRole });
+      setMembers(updated); setMemberEmail(""); toast.success("Workspace membership saved.");
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
+  };
   const save = async (e) => {
     e.preventDefault();
     setBusy(true);
     setError("");
     try {
-      await execute("workspace.update", {
+      await execute(draft.id ? "workspace.update" : "workspace.create", {
         workspaceId: draft.id,
         name: draft.name,
         description: draft.description,
@@ -49,6 +59,7 @@ export default function Workspaces() {
         title="Your workspaces"
         description="Keep brand knowledge, content and people in the right place."
       >
+        {!demo && accountRole === "Admin" && <Button onClick={() => { setError(""); setDraft({ name: "", description: "", consent: false }); }}>Create workspace</Button>}
         <span className="small-tag">
           <Building2 size={15} />
           {workspaces.length} assigned workspaces
@@ -57,7 +68,7 @@ export default function Workspaces() {
       <div className="workspace-grid">
         {workspaces.map((w) => (
           <article
-            className={`card workspace-card ${w.id === workspace.id ? "selected" : ""}`}
+            className={`card workspace-card ${w.id === workspace?.id ? "selected" : ""}`}
             key={w.id}
           >
             <div className="workspace-card-top">
@@ -107,7 +118,7 @@ export default function Workspaces() {
                 <small>
                   {demo
                     ? "No external AI calls in Demo Mode"
-                    : "The backend must enforce this permission"}
+                    : "Applies to external AI analysis"}
                 </small>
               </div>
               <span className={`status-light ${w.consent ? "enabled" : ""}`} />
@@ -149,12 +160,7 @@ export default function Workspaces() {
           </article>
         ))}
       </div>
-      <Notice className="mt-20">
-        Workspace membership controls which demo records each role can access.
-        AI permission applies to future external processing; deterministic
-        browser text checks remain local and available. Adding workspaces and
-        inviting real users require the backend.
-      </Notice>
+      <Notice className="mt-20">{demo ? "Demo membership controls access to fictional browser records. Creating workspaces and assigning real users are available in API mode." : "Workspace membership controls access to private brand records. Register users first, then assign their email and role. External AI requires explicit workspace permission."}</Notice>
       <Modal
         open={!!members}
         onClose={() => setMembers(null)}
@@ -162,7 +168,7 @@ export default function Workspaces() {
       >
         <div className="modal-body">
           <p className="muted small">
-            Assigned demonstration identities and their roles.
+            {demo ? "Assigned demonstration identities and their roles." : "Assigned workspace members and their authorised roles."}
           </p>
           <div className="members-list">
             {members?.members.map((m) => (
@@ -178,16 +184,19 @@ export default function Workspaces() {
               </div>
             ))}
           </div>
-          <Notice>
-            These identities are fictional. Production membership and
-            authorization must be enforced by FastAPI.
-          </Notice>
+          {manageMembers && <form className="stack-form" onSubmit={assignMember}>
+            <label>Registered user email<input type="email" required value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} /></label>
+            <label>Workspace role<select value={memberRole} onChange={(e) => setMemberRole(e.target.value)}>{["Content Creator", "Reviewer", "Agency Partner", "Admin"].map((role) => <option key={role}>{role}</option>)}</select></label>
+            {error && <Notice tone="danger">{error}</Notice>}
+            <Button type="submit" loading={busy}>Assign membership</Button>
+          </form>}
+          <Notice>{demo ? "These identities are fictional." : "Permissions are enforced by FastAPI for every workspace action."}</Notice>
         </div>
       </Modal>
       <Modal
         open={!!draft}
         onClose={() => setDraft(null)}
-        title="Workspace settings"
+        title={draft?.id ? "Workspace settings" : "Create workspace"}
         busy={busy}
       >
         {draft && (
@@ -223,9 +232,7 @@ export default function Workspaces() {
               <span>
                 <strong>Permit external AI processing</strong>
                 <small>
-                  Permission only. Demo Mode does not send content to an
-                  external model. The backend must check this setting before
-                  processing.
+                  {demo ? "Demo Mode does not send content to an external model." : "Permit selected content excerpts and relevant approved knowledge to be sent to the configured Gemini service. Deterministic checks remain available without this permission."}
                 </small>
               </span>
             </label>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext.jsx";
 import { useData } from "./DataContext.jsx";
 import {
@@ -10,7 +10,7 @@ import {
 const WorkspaceContext = createContext(null);
 export function WorkspaceProvider({ children }) {
   const { data } = useData();
-  const { user, demo } = useAuth();
+  const { user, demo, setWorkspaceRole } = useAuth();
   const [selectedId, setSelectedId] = useState(() => {
     try {
       return localStorage.getItem("brandshield.workspace") || "";
@@ -21,9 +21,13 @@ export function WorkspaceProvider({ children }) {
   const workspaces = assignedWorkspaces(data, user);
   const workspace =
     workspaces.find((w) => w.id === selectedId) || workspaces[0] || null;
+  const membershipRole = workspace?.members.find((m) => m.id === user?.id)?.role;
+  useEffect(() => {
+    setWorkspaceRole(demo ? null : membershipRole || null);
+  }, [demo, membershipRole, setWorkspaceRole]);
   const selectWorkspace = (id) => {
     if (!workspaces.some((w) => w.id === id)) return;
-    if (demo) {
+    {
       try {
         localStorage.setItem("brandshield.workspace", id);
       } catch {

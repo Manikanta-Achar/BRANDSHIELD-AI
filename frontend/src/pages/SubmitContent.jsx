@@ -72,13 +72,13 @@ export default function SubmitContent() {
       let content = form.content,
         uploadId;
       if (file && !demo) {
-        const upload = await submissionService.upload(file, (e) =>
+        const upload = await submissionService.upload(file, workspace.id, (e) =>
           setProgress(e.total ? Math.round((e.loaded / e.total) * 100) : 0),
         );
         if (!upload.id)
           throw new Error("The upload API did not return an upload ID.");
         uploadId = upload.id;
-        content = content || upload.text;
+        content = content.trim() ? content : upload.text;
         if (!content)
           throw new Error(
             "Document extraction is not ready. Paste text or implement the extraction API.",
@@ -294,7 +294,7 @@ export default function SubmitContent() {
             <Notice>
               {demo
                 ? "Demo Mode checks pasted text only. PDF/DOCX selection is a UI preview; files are not uploaded, stored or analysed. Extraction requires the FastAPI backend."
-                : "Files are sent to the configured FastAPI upload endpoint. Document processing requires the extraction service. Backend errors will be shown."}
+                : "PDF and DOCX text is extracted before analysis. Unreadable documents show an error; you can paste their text instead."}
             </Notice>
             {progress > 0 && !demo && busy && (
               <p role="status" className="muted">
@@ -367,13 +367,11 @@ export default function SubmitContent() {
           </div>
           <div className="gentle-note">
             <Sparkles size={19} />
-            <h4>AI assistance, when it’s ready.</h4>
+            <h4>{demo ? "AI assistance, when it’s ready." : "Checks with clear boundaries."}</h4>
             <p>
-              Claim verification (A1) and tone analysis (A2) need the backend
-              LLM service. Image alt-text (R6) and contrast (R7) need actual
-              document metadata.
+              {demo ? "Claim verification and tone analysis require the backend. Image checks need document metadata." : "AI assistance requires workspace permission. Alt-text and contrast are checked only where document metadata supports them. Your report shows any skipped checks."}
             </p>
-            <span className="small-tag">Unavailable in frontend-only mode</span>
+            <span className="small-tag">{demo ? "Unavailable in frontend-only mode" : "Human review required"}</span>
           </div>
           <p className="submission-privacy">
             <ShieldCheck size={15} />

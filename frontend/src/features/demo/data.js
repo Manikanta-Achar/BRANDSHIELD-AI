@@ -25,6 +25,8 @@ export const TABS = [
   "Prohibited Words",
   "Required Disclaimers",
   "Approved Claims",
+  "Approved Terminology",
+  "Approved Assets",
 ];
 export const USERS = {
   Admin: {

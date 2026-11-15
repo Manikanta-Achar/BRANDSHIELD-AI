@@ -1,9 +1,9 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { USERS } from "../features/demo/data.js";
 import { authService, profileService } from "../api/endpoints.js";
 import { setAccessToken } from "../api/axios.js";
 
-export const DEMO_MODE = import.meta.env.VITE_DEMO_MODE !== "false";
+export const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 const AuthContext = createContext(null);
 const KEY = "brandshield.demo.identity.v2";
 function initialUser() {
@@ -16,8 +16,30 @@ function initialUser() {
   }
 }
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(initialUser);
+  const [account, setUser] = useState(initialUser);
+  const [workspaceRole, setWorkspaceRole] = useState(null);
+  const [authLoading, setAuthLoading] = useState(!DEMO_MODE);
+  const user = useMemo(() => account ? { ...account, role: workspaceRole || account.role } : null, [account, workspaceRole]);
   const [authError, setAuthError] = useState("");
+  useEffect(() => {
+    if (DEMO_MODE) return;
+    let active = true;
+    const expire = () => {
+      setAccessToken(null);
+      sessionStorage.removeItem("brandshield.accessToken");
+      setUser(null);
+      setWorkspaceRole(null);
+    };
+    window.addEventListener("brandshield:unauthorized", expire);
+    const token = sessionStorage.getItem("brandshield.accessToken");
+    if (token) {
+      setAccessToken(token);
+      authService.me().then((value) => { if (active) setUser(value); })
+        .catch((error) => { if (active) { expire(); setAuthError(error.message); } })
+        .finally(() => { if (active) setAuthLoading(false); });
+    } else setAuthLoading(false);
+    return () => { active = false; window.removeEventListener("brandshield:unauthorized", expire); };
+  }, []);
   const remember = (value) => {
     if (DEMO_MODE) {
       try {
@@ -65,6 +87,8 @@ export function AuthProvider({ children }) {
         "Invalid authentication response. Expected access_token and user.",
       );
     setAccessToken(result.access_token);
+    sessionStorage.setItem("brandshield.accessToken", result.access_token);
+    setWorkspaceRole(null);
     remember(result.user);
   };
   const switchRole = (role) => {
@@ -72,7 +96,12 @@ export function AuthProvider({ children }) {
     remember({ ...USERS[role] });
   };
   const logout = () => {
+    if (!DEMO_MODE) {
+      authService.logout().catch(() => {});
+      sessionStorage.removeItem("brandshield.accessToken");
+    }
     setAccessToken(null);
+    setWorkspaceRole(null);
     remember(null);
   };
   const updateProfile = async (values) => {
@@ -99,6 +128,9 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
+        accountRole: account?.role,
+        authLoading,
+        setWorkspaceRole,
         login,
         logout,
         switchRole,

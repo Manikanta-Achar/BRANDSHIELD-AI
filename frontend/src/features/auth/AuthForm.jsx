@@ -39,12 +39,12 @@ export default function AuthForm({ register = false }) {
       if (
         !quickDemo &&
         (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email) ||
-          fields.password.length < (register ? 8 : 1) ||
+          fields.password.length < (register ? (demo ? 8 : 12) : 1) ||
           (register && !fields.name.trim()))
       )
         throw new Error(
           register
-            ? "Enter your name, a valid email and a password of at least 8 characters."
+            ? `Enter your name, a valid email and a password of at least ${demo ? 8 : 12} characters.`
             : "Enter a valid email and your password.",
         );
       await login({ ...fields, role }, register && !quickDemo);
@@ -205,10 +205,10 @@ export default function AuthForm({ register = false }) {
                   onChange={(e) =>
                     setFields({ ...fields, password: e.target.value })
                   }
-                  minLength={register ? 8 : 1}
+                  minLength={register ? (demo ? 8 : 12) : 1}
                   required
                   placeholder={
-                    register ? "At least 8 characters" : "Enter your password"
+                    register ? `At least ${demo ? 8 : 12} characters` : "Enter your password"
                   }
                 />
                 <button

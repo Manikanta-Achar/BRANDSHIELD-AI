@@ -1,6 +1,6 @@
 # BrandShield AI frontend
 
-A complete React/Vite demonstration for CodeNova India 2026. The existing frontend structure is retained. No backend files are required or modified.
+The existing React/Vite interface is integrated with the FastAPI backend in `../backend/`. See the [current project setup](../README.md) and [implemented API inventory](../docs/api-reference.md). The demonstration walkthrough below is retained as documentation of the optional browser-only mode.
 
 ## Run locally
 
@@ -14,7 +14,7 @@ npm run dev
 
 Open the Local URL printed by Vite (normally http://127.0.0.1:5173).
 
-Demo Mode is enabled by default. Optional configuration:
+API mode is the default. Optional configuration:
 
 ```powershell
 Copy-Item .env.example .env.local
@@ -22,7 +22,7 @@ Copy-Item .env.example .env.local
 
 ```dotenv
 VITE_API_BASE_URL=http://localhost:8000/api/v1
-VITE_DEMO_MODE=true
+VITE_DEMO_MODE=false
 ```
 
 Restart Vite after changing environment settings. Vite variables are public build configuration; never put secrets in them.

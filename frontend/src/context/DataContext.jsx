@@ -46,6 +46,7 @@ function readData() {
 }
 export function DataProvider({ children }) {
   const { user, demo } = useAuth();
+  const userId = user?.id;
   const [data, setData] = useState(readData);
   const current = useRef(data);
   const [error, setError] = useState("");
@@ -69,7 +70,7 @@ export function DataProvider({ children }) {
     [install],
   );
   const refresh = useCallback(async () => {
-    if (demo || !user) {
+    if (demo || !userId) {
       setLoading(false);
       return;
     }
@@ -102,7 +103,7 @@ export function DataProvider({ children }) {
         knowledge: records.flatMap((r) => r.knowledge),
         submissions: records.flatMap((r) => r.submissions),
         audit: records.flatMap((r) => r.audit),
-        preferences: { [user.id]: preferences },
+        preferences: { [userId]: preferences },
       });
     } catch (e) {
       setError(e.message);
@@ -110,7 +111,7 @@ export function DataProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [demo, user, install]);
+  }, [demo, userId, install]);
   useEffect(() => {
     if (demo) {
       try {

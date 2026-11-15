@@ -36,6 +36,8 @@ const icons = [
   ShieldBan,
   FileWarning,
   BadgeCheck,
+  SpellCheck,
+  FileCheck2,
 ];
 const blank = (type) => ({
   type,
