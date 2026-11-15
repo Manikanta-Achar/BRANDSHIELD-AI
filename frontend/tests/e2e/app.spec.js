@@ -442,7 +442,7 @@ test("mobile landing, sidebar, dashboard and analysis fit the viewport", async (
 test("API mode surfaces unavailable services and never falls back to demo authentication", async ({
   page,
 }) => {
-  await page.route("http://localhost:8000/**", (route) =>
+  await page.route("http://127.0.0.1:8000/**", (route) =>
     route.abort("connectionrefused"),
   );
   await page.goto("http://127.0.0.1:4174/login");
@@ -451,7 +451,11 @@ test("API mode surfaces unavailable services and never falls back to demo authen
     .getByLabel("Email address", { exact: true })
     .fill("admin@example.com");
   await page.getByLabel("Password", { exact: true }).fill("example-password");
+  const loginRequest = page.waitForRequest(
+    "http://127.0.0.1:8000/api/v1/auth/login",
+  );
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  expect((await loginRequest).method()).toBe("POST");
   await expect(page.getByRole("alert")).toContainText("Cannot reach the API");
   await expect(page).toHaveURL(/\/login$/);
   expect(

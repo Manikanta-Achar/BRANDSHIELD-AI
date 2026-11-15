@@ -61,6 +61,10 @@ def create_app(settings=None):
         logger.error("Database operation failed (%s)", type(error).__name__)
         return JSONResponse({"detail": "Database unavailable. Please retry."}, status_code=503)
 
+    @app.get("/", tags=["Health"])
+    async def root():
+        return {"status": "ok", "service": "BRANDSHIELD-AI API"}
+
     @app.get("/health/live", tags=["Health"])
     async def live():
         return {"status": "alive"}

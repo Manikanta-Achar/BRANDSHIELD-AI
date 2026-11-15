@@ -22,6 +22,9 @@ test = ["pytest>=8,<10", "pytest-asyncio>=1,<2", "asgi-lifespan>=2,<3", "ruff>=0
 include = ["app*"]
 namespaces = true
 
+[tool.vercel]
+entrypoint = "app.main:app"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

@@ -157,7 +157,7 @@ The audit system records important workflow activities and helps teams understan
 | AI Integration | Google Gemini API |
 | API Documentation | FastAPI OpenAPI / Swagger |
 | Testing | Pytest, Ruff, Playwright |
-| Deployment | Vercel frontend, Python container backend, MongoDB Atlas |
+| Deployment | Vercel frontend/backend, Python container backend, MongoDB Atlas |
 
 The production architecture requires persistent database storage. There is no automatic in-memory fallback when MongoDB is unavailable.
 
@@ -567,6 +567,8 @@ npm test
 npm run lint
 ```
 
+Production frontend builds require an HTTPS `VITE_API_BASE_URL` and disabled Demo Mode. Set `VITE_API_BASE_URL=https://brandshield-ai-nu.vercel.app/api/v1` and `VITE_DEMO_MODE=false` in the terminal or a private `frontend/.env.production.local` file before running:
+
 ```bash
 npm run build
 ```
@@ -602,12 +604,13 @@ See `docs/verification.md` for the project's verification records.
 The repository includes configuration for:
 
 - Vercel frontend hosting
+- Vercel FastAPI backend hosting
 - Python container-based backend hosting
 - MongoDB Atlas database storage
 
 Deployment configuration is provided in:
 
-`docs/deployment.md`
+[Deployment guide](docs/deployment.md). It records the verified Vercel connectivity diagnosis and remaining Dashboard settings; local checks do not establish production success.
 
 **Deployment readiness does not mean the application is currently live.** Public deployment and production integrations require separate verification.
 

@@ -1,6 +1,10 @@
 import axios from "axios";
+import { resolveApiBaseUrl } from "./config.js";
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1",
+  baseURL: resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL, {
+    production: import.meta.env.PROD,
+  }),
   timeout: 15000,
   headers: { "Content-Type": "application/json" },
 });
@@ -26,7 +30,7 @@ api.interceptors.response.use(
         : validation ||
           (error.response
             ? `API request failed (${error.response.status}). ${error.response.data?.message || "Please try again."}`
-            : "Cannot reach the API. Start your FastAPI service. No demo fallback was used.");
+            : "Cannot reach the API. Check your connection or contact your administrator. No demo fallback was used.");
     return Promise.reject(new Error(message));
   },
 );
