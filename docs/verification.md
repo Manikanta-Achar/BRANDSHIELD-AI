@@ -1,5 +1,15 @@
 # Verification record
 
+## CORS follow-up — 16 November 2026
+
+The deployed frontend already included API URL normalization, but the live backend still returned 400 for its login preflight. Backend readiness and the root route both returned 200. The follow-up adds a public canonical frontend origin to the Vercel runtime configuration and merges it with the existing CORS allowlist.
+
+- Backend tests against the isolated MongoDB replica set: **47 passed**, 24.44 seconds, no skips.
+- Backend Ruff and Git diff whitespace checks: passed.
+- Regression coverage verifies the actual Vercel configuration when Dashboard CORS contains only localhost, permits existing origins and bearer/JSON preflight headers, exposes API error responses to the frontend, rejects unrelated origins, and validates the canonical origin setting.
+
+For release verification, confirm the production preflight returns 200 and an unauthenticated browser POST with an empty JSON body can read the expected 422 validation response. This checks browser access to the login route without using credentials or creating accounts.
+
 ## Deployment fixes — 16 November 2026
 
 Checked locally with Python 3.13, Node.js, Google Chrome, and a separate MongoDB 8.0.5 replica set on loopback port 27018. Integration tests used generated isolated test databases; no production data or live AI provider calls were used.

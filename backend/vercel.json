@@ -1,6 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "fastapi",
+  "env": {
+    "FRONTEND_ORIGIN": "https://brandshield-ai-y11i.vercel.app"
+  },
   "functions": {
     "app/main.py": {
       "maxDuration": 120,

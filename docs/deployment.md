@@ -19,10 +19,16 @@ The deployed frontend JavaScript configures Axios with `baseURL: "https://brands
 
 The local changes add a root service response, declare the existing entrypoint, normalize the API prefix, and reject invalid production frontend settings. Production remains unverified after these changes until both projects are redeployed and checked again.
 
+### CORS follow-up
+
+After the API URL fix deployed, the frontend bundle correctly normalized the backend origin to `/api/v1`, and the backend root and readiness routes returned 200. The frontend origin still received a 400 preflight response, causing the browser to show "Cannot reach the API" even though the database was connected.
+
+`backend/vercel.json` now supplies the public `FRONTEND_ORIGIN=https://brandshield-ai-y11i.vercel.app` runtime setting. The backend adds this exact origin to its CORS allowlist while preserving existing `CORS_ORIGINS` entries. This applies the fix through the Git deployment without requiring an operator to replace the Dashboard allowlist. No wildcard or automatic preview-origin access is enabled. Other hosts may set `FRONTEND_ORIGIN` themselves; keep database, JWT and AI secrets in private host settings.
+
 ## Vercel backend
 
 1. In **Settings → Build and Deployment**, select Root Directory `backend` and Framework Preset **FastAPI**. Clear custom frontend Build Command, Install Command and Output Directory overrides. The Python preset installs runtime dependencies from `pyproject.toml`; do not use an npm/Vite build or a persistent Uvicorn command.
-2. `[tool.vercel]` declares `app.main:app`; `.python-version` selects Python 3.13. `vercel.json` configures the same `app/main.py` function with a 120-second duration and excludes local/test files. An `index.py` adapter and legacy catch-all routing are unnecessary. See [Vercel FastAPI support](https://vercel.com/docs/frameworks/backend/fastapi) and [Python version configuration](https://vercel.com/docs/functions/runtimes/python/python-version).
+2. `[tool.vercel]` declares `app.main:app`; `.python-version` selects Python 3.13. `vercel.json` configures the same `app/main.py` function with a 120-second duration, excludes local/test files, and sets the public canonical frontend origin. An `index.py` adapter and legacy catch-all routing are unnecessary. See [Vercel FastAPI support](https://vercel.com/docs/frameworks/backend/fastapi), [Python version configuration](https://vercel.com/docs/functions/runtimes/python/python-version) and [runtime environment configuration](https://vercel.com/docs/project-configuration/vercel-json#env).
 3. Configure the following **backend-only Production environment variables** in the Dashboard. Preserve the existing database name and JWT secret so records and sessions remain available:
 
    ```env
@@ -34,7 +40,7 @@ The local changes add a root service response, declare the existing entrypoint, 
    ENABLE_DEMO_SEED=false
    ```
 
-   CORS must be a JSON array of exact origins without paths or trailing slashes. Explicitly add a preview origin only if it needs API access. Existing middleware permits JSON, bearer authorization and OPTIONS preflight without requiring a JWT for preflight.
+   CORS must be a JSON array of exact origins without paths or trailing slashes. The `FRONTEND_ORIGIN` from `vercel.json` is added independently, so a local-only Dashboard CORS list cannot omit the canonical frontend. Explicitly add a preview origin only if it needs API access. Existing middleware permits JSON, bearer authorization and OPTIONS preflight without requiring a JWT for preflight.
 4. Optional AI assistance requires private `GEMINI_API_KEY`, a valid `GEMINI_MODEL`, and workspace consent. Keep secrets in the backend Dashboard. Do not enable production seeding or bootstrap another administrator in the existing database.
 5. Retain restricted Atlas database/network permissions. The existing async client is initialized during FastAPI lifespan, reused across requests and closed on shutdown. Database startup failures leave liveness available; readiness and database-dependent API routes return 503. Inspect sanitized logs and restart/redeploy after correcting configuration.
 6. Redeploy to apply code and environment changes. Check `/`, `/health/live`, `/health/ready`, `/docs` and `/openapi.json` separately. Root and liveness responses do not establish database readiness.

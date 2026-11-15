@@ -38,7 +38,7 @@ def create_app(settings=None):
     app.add_middleware(BodyLimitMiddleware, upload_limit=settings.max_upload_bytes)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=settings.allowed_cors_origins,
         allow_credentials=False,
         allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"],
         allow_headers=["Authorization", "Content-Type"],

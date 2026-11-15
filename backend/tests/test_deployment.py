@@ -1,10 +1,13 @@
 import importlib
+import json
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import httpx
 import pytest
 from asgi_lifespan import LifespanManager
+from pydantic import ValidationError
 from pymongo.errors import ConnectionFailure
 
 from app.core.config import Settings
@@ -110,6 +113,53 @@ async def test_cors_rejects_unconfigured_origins():
         )
         assert response.status_code == 400
         assert "access-control-allow-origin" not in response.headers
+
+
+async def test_vercel_frontend_is_allowed_with_local_only_dashboard_cors(monkeypatch):
+    deployment = json.loads((Path(__file__).parents[1] / "vercel.json").read_text())
+    monkeypatch.setenv("FRONTEND_ORIGIN", deployment["env"]["FRONTEND_ORIGIN"])
+    monkeypatch.setenv("CORS_ORIGINS", '["http://localhost:5173"]')
+    configured = Settings(_env_file=None, environment="test")
+    app = create_app(configured)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        for origin in (FRONTEND_ORIGIN, "http://localhost:5173"):
+            preflight = await client.options(
+                "/api/v1/auth/login",
+                headers={
+                    "Origin": origin,
+                    "Access-Control-Request-Method": "POST",
+                    "Access-Control-Request-Headers": "authorization,content-type",
+                },
+            )
+            assert preflight.status_code == 200
+            assert preflight.headers["access-control-allow-origin"] == origin
+        unavailable = await client.get("/api/v1/auth/me", headers={"Origin": FRONTEND_ORIGIN})
+        assert unavailable.status_code == 503
+        assert unavailable.headers["access-control-allow-origin"] == FRONTEND_ORIGIN
+        for origin in ("https://untrusted.example", FRONTEND_ORIGIN + ".untrusted.example"):
+            rejected = await client.options(
+                "/api/v1/auth/login",
+                headers={"Origin": origin, "Access-Control-Request-Method": "POST"},
+            )
+            assert rejected.status_code == 400
+            assert "access-control-allow-origin" not in rejected.headers
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "*",
+        "https://*.vercel.app",
+        "https://frontend.example/login",
+        "https://frontend.example?token=example",
+        "https://frontend.example#fragment",
+        "https://user:password@frontend.example",
+        "file:///frontend.example",
+    ],
+)
+def test_frontend_origin_rejects_unsafe_or_non_origin_values(origin):
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, frontend_origin=origin)
 
 
 async def test_real_database_readiness(env):
